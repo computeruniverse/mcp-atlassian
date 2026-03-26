@@ -36,7 +36,8 @@ Restart Claude Code when done.
 2. Writes your credentials to `~/.config/mcp-atlassian/.env` (`600` — owner read/write only)
 3. Generates `~/.config/mcp-atlassian/run.sh` — the launcher Claude Code calls to start the server
 4. Excludes `~/.config/mcp-atlassian/` from Time Machine backups
-5. Registers the MCP server with Claude Code at user scope (available in all projects)
+5. Installs Claude Code skills from `setup/skills/` into `~/.claude/skills/`
+6. Registers the MCP server with Claude Code at user scope (available in all projects)
 
 ## Resulting setup
 
@@ -61,6 +62,20 @@ Claude Code
 ```
 
 The server is registered at **user scope**, meaning it is available across all your Claude Code projects without additional configuration.
+
+## Included skills
+
+The setup script installs the following Claude Code skills into `~/.claude/skills/`:
+
+| Skill | Usage | Description |
+|---|---|---|
+| `create-ticket` | `/create-ticket "Summary" [--type Story\|Defect] [--brand CP\|CU\|"CP & CU"] [--sprint "..."] [--labels A,B] [--due YYYY-MM-DD]` | Creates a Jira ticket in the NOP project with the correct custom fields, template structure, and workflow transition |
+
+Skills are invoked as slash commands inside Claude Code. Example:
+
+```
+/create-ticket "MailKit upgraden" --type Story --brand "CP & CU" --sprint "Tech Debt Backlog" --labels Backend,TechnicalDebt
+```
 
 ## Verify
 

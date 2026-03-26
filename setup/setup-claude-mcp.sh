@@ -76,6 +76,20 @@ EOF
 chmod +x "$RUN_SCRIPT"
 echo "Launcher written to $RUN_SCRIPT"
 
+# --- Install Claude Code skills ---
+
+SKILLS_SRC="$SCRIPT_DIR/skills"
+SKILLS_DST="$HOME/.claude/skills"
+
+if [ -d "$SKILLS_SRC" ]; then
+    for skill_dir in "$SKILLS_SRC"/*/; do
+        skill_name="$(basename "$skill_dir")"
+        mkdir -p "$SKILLS_DST/$skill_name"
+        cp "$skill_dir/SKILL.md" "$SKILLS_DST/$skill_name/SKILL.md"
+        echo "Installed skill: $skill_name"
+    done
+fi
+
 # --- Register with Claude Code ---
 
 echo
