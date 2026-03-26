@@ -1617,7 +1617,7 @@ async def update_issue(
         ),
     ] = None,
 ) -> str:
-    """Update an existing Jira issue including changing status, adding Epic links, updating fields, etc.
+    """Update an existing Jira issue including changing status, adding Epic links, updating fields, adding attachments, etc.
 
     Args:
         ctx: The FastMCP context.
