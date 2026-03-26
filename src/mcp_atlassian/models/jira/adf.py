@@ -31,6 +31,7 @@ def _parse_inline_formatting(text: str) -> list[dict[str, Any]]:
         r"`(?P<code_inner>[^`]+)`"
         r"|\*\*(?P<bold_inner>.+?)\*\*"
         r"|~~(?P<strike_inner>.+?)~~"
+        r"|\[~accountid:(?P<mention_id>[^\]]+)\]"
         r"|\[(?P<link_text>[^\]]+)\]\((?P<link_href>[^)]+)\)"
         r"|(?<!\*)\*(?!\*)(?P<italic_inner>.+?)(?<!\*)\*(?!\*)"
     )
@@ -67,19 +68,33 @@ def _parse_inline_formatting(text: str) -> list[dict[str, Any]]:
                     "marks": [{"type": "strike"}],
                 }
             )
-        elif m.group("link_text") is not None:
+        elif m.group("mention_id") is not None:
             nodes.append(
                 {
-                    "type": "text",
-                    "text": m.group("link_text"),
-                    "marks": [
-                        {
-                            "type": "link",
-                            "attrs": {"href": m.group("link_href")},
-                        }
-                    ],
+                    "type": "mention",
+                    "attrs": {
+                        "id": m.group("mention_id"),
+                        "text": f"@{m.group('mention_id')}",
+                    },
                 }
             )
+        elif m.group("link_text") is not None:
+            href = m.group("link_href")
+            if re.search(r"/browse/[A-Z][A-Z0-9_]+-\d+$", href):
+                nodes.append({"type": "inlineCard", "attrs": {"url": href}})
+            else:
+                nodes.append(
+                    {
+                        "type": "text",
+                        "text": m.group("link_text"),
+                        "marks": [
+                            {
+                                "type": "link",
+                                "attrs": {"href": href},
+                            }
+                        ],
+                    }
+                )
         elif m.group("italic_inner") is not None:
             nodes.append(
                 {
