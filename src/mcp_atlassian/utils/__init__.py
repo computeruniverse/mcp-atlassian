@@ -21,6 +21,7 @@ from .media import (
 # Export OAuth utilities
 from .oauth import OAuthConfig, configure_oauth_session
 from .ssl import SSLIgnoreAdapter, configure_ssl_verification
+from .privacy import redact
 from .urls import is_atlassian_cloud_url, resolve_relative_url, validate_url_for_ssrf
 
 # Export all utility functions for backward compatibility
@@ -41,5 +42,6 @@ __all__ = [
     "setup_signal_handlers",
     "ensure_clean_exit",
     "fetch_and_encode_attachment",
+    "redact",
     "validate_url_for_ssrf",
 ]

@@ -8,6 +8,8 @@ from typing import Any
 
 from pydantic import Field
 
+from mcp_atlassian.utils.privacy import redact
+
 from ..base import ApiModel, TimestampMixin
 from .common import ConfluenceUser
 
@@ -48,10 +50,12 @@ class ConfluenceUserSearchResult(ApiModel):
         user_data = data.get("user", {})
         user = ConfluenceUser.from_api_response(user_data) if user_data else None
 
+        raw_title = data.get("title")
+        raw_excerpt = data.get("excerpt")
         return cls(
             user=user,
-            title=data.get("title"),
-            excerpt=data.get("excerpt"),
+            title=redact(raw_title) if raw_title else raw_title,
+            excerpt=redact(raw_excerpt) if raw_excerpt else raw_excerpt,
             url=data.get("url"),
             entity_type=data.get("entityType", "user"),
             last_modified=data.get("lastModified"),

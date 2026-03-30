@@ -4,6 +4,8 @@ import logging
 import re
 from typing import Any
 
+from mcp_atlassian.utils.privacy import redact
+
 from .base import BasePreprocessor, _extract_blocks, _restore_blocks
 
 logger = logging.getLogger("mcp-atlassian")
@@ -146,7 +148,7 @@ class JiraPreprocessor(BasePreprocessor):
             # Then convert any remaining HTML to markdown
             text = self._convert_html_to_markdown(text)
 
-        return text.strip()
+        return redact(text.strip())
 
     def _process_mentions(self, text: str, pattern: str) -> str:
         """

@@ -7,6 +7,8 @@ This module provides Pydantic models for Jira issue links and link types.
 import logging
 from typing import Any
 
+from mcp_atlassian.utils.privacy import redact
+
 from ..base import ApiModel
 from ..constants import EMPTY_STRING, JIRA_DEFAULT_ID, UNKNOWN
 from .common import JiraIssueType, JiraPriority, JiraStatus
@@ -121,7 +123,7 @@ class JiraLinkedIssueFields(ApiModel):
             issuetype = JiraIssueType.from_api_response(issuetype_data)
 
         return cls(
-            summary=str(data.get("summary", EMPTY_STRING)),
+            summary=redact(str(data.get("summary", EMPTY_STRING))),
             status=status,
             priority=priority,
             issuetype=issuetype,

@@ -12,6 +12,7 @@ from typing import Any
 from pydantic import Field, field_serializer
 
 from mcp_atlassian.utils import parse_date
+from mcp_atlassian.utils.privacy import redact
 
 from ..base import ApiModel, TimestampMixin
 from ..constants import (
@@ -482,11 +483,13 @@ class JiraChangelogItem(ApiModel):
         if not data or not isinstance(data, dict):
             return cls()
 
+        raw_from = data.get("fromString")
+        raw_to = data.get("toString")
         return cls(
             field=str(data.get("field", EMPTY_STRING)),
             fieldtype=str(data.get("fieldtype", EMPTY_STRING)),
-            from_string=data.get("fromString"),
-            to_string=data.get("toString"),
+            from_string=redact(raw_from) if isinstance(raw_from, str) else raw_from,
+            to_string=redact(raw_to) if isinstance(raw_to, str) else raw_to,
             from_id=data.get("from"),
             to_id=data.get("to"),
         )

@@ -10,6 +10,8 @@ from typing import Any, Literal
 
 from pydantic import Field
 
+from mcp_atlassian.utils.privacy import redact
+
 from ..base import ApiModel, TimestampMixin
 from ..constants import (
     EMPTY_STRING,
@@ -267,13 +269,13 @@ class JiraIssue(ApiModel, TimestampMixin):
         # Get required simple fields
         issue_id = str(data.get("id", JIRA_DEFAULT_ID))
         key = str(data.get("key", JIRA_DEFAULT_KEY))
-        summary = str(fields.get("summary", EMPTY_STRING))
+        summary = redact(str(fields.get("summary", EMPTY_STRING)))
 
         # Handle description - can be string (legacy) or ADF dict (Jira Cloud new editor)
         raw_description = fields.get("description")
         if isinstance(raw_description, dict):
-            # Convert ADF to plain text
-            description = adf_to_text(raw_description)
+            # Convert ADF to plain text before redacting so PII in ADF nodes is caught
+            description = redact(adf_to_text(raw_description) or "")
         else:
             description = raw_description
 
@@ -687,13 +689,20 @@ class JiraIssue(ApiModel, TimestampMixin):
         Returns:
             Processed value suitable for API response
         """
-        if field_value is None or isinstance(field_value, str | int | float | bool):
+        if field_value is None or isinstance(field_value, int | float | bool):
             return field_value
 
+        if isinstance(field_value, str):
+            return redact(field_value)
+
         if isinstance(field_value, dict):
+            # ADF documents (e.g. Akzeptanzkriterien) — convert to plain text first
+            if field_value.get("type") == "doc":
+                return redact(adf_to_text(field_value) or "")
             # For single-select, user pickers, etc., try to extract 'value' or 'name'
             if "value" in field_value:
-                return field_value["value"]
+                v = field_value["value"]
+                return redact(v) if isinstance(v, str) else v
             elif "name" in field_value:
                 # Standard Jira reference objects (priority, user, group) have a
                 # "self" URL key — simplify those to just the name. Plugin data
@@ -707,7 +716,7 @@ class JiraIssue(ApiModel, TimestampMixin):
         if isinstance(field_value, list):
             return [self._process_custom_field_value(item) for item in field_value]
 
-        return str(field_value)
+        return redact(str(field_value))
 
     def _find_custom_field_in_issue(
         self, name: str, pattern: bool = False

@@ -6,6 +6,8 @@ This module provides Pydantic models for Confluence page comments.
 import logging
 from typing import Any
 
+from mcp_atlassian.utils.privacy import redact
+
 from ..base import ApiModel, TimestampMixin
 from ..constants import (
     CONFLUENCE_DEFAULT_ID,
@@ -75,8 +77,10 @@ class ConfluenceComment(ApiModel, TimestampMixin):
 
         return cls(
             id=str(data.get("id", CONFLUENCE_DEFAULT_ID)),
-            title=title,
-            body=data.get("body", {}).get("view", {}).get("value", EMPTY_STRING),
+            title=redact(title) if title else title,
+            body=redact(
+                data.get("body", {}).get("view", {}).get("value", EMPTY_STRING)
+            ),
             created=data.get("created", EMPTY_STRING),
             updated=data.get("updated", EMPTY_STRING),
             author=author,
