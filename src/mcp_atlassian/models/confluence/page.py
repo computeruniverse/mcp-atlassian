@@ -9,13 +9,13 @@ from typing import Any
 
 from pydantic import Field
 
+from mcp_atlassian.utils.privacy import redact
+
 from ..base import ApiModel, TimestampMixin
 from ..constants import (
     CONFLUENCE_DEFAULT_ID,
     EMPTY_STRING,
 )
-
-# Import other necessary models using relative imports
 from .common import ConfluenceAttachment, ConfluenceUser
 from .space import ConfluenceSpace
 
@@ -227,7 +227,7 @@ class ConfluencePage(ApiModel, TimestampMixin):
 
         return cls(
             id=str(data.get("id", CONFLUENCE_DEFAULT_ID)),
-            title=data.get("title", EMPTY_STRING),
+            title=redact(data.get("title", EMPTY_STRING)),
             type=data.get("type", "page"),
             status=data.get("status", "current"),
             space=space,
@@ -280,7 +280,7 @@ class ConfluencePage(ApiModel, TimestampMixin):
         # Add ancestors if there are any
         if self.ancestors:
             result["ancestors"] = [
-                {"id": a.get("id"), "title": a.get("title")}
+                {"id": a.get("id"), "title": redact(t) if (t := a.get("title")) else t}
                 for a in self.ancestors
                 if "id" in a
             ]

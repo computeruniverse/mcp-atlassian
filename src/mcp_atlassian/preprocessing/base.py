@@ -10,6 +10,8 @@ from typing import Any, Protocol
 from bs4 import BeautifulSoup, Tag
 from markdownify import markdownify as md
 
+from mcp_atlassian.utils.privacy import redact
+
 logger = logging.getLogger("mcp-atlassian")
 
 
@@ -123,7 +125,7 @@ class BasePreprocessor:
 
             # Convert to string and markdown
             processed_html = str(soup)
-            processed_markdown = md(processed_html)
+            processed_markdown = redact(md(processed_html))
 
             return processed_html, processed_markdown
 

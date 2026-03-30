@@ -7,6 +7,8 @@ This module provides Pydantic models for Jira comments.
 import logging
 from typing import Any
 
+from mcp_atlassian.utils.privacy import redact
+
 from ..base import ApiModel, TimestampMixin
 from ..constants import (
     EMPTY_STRING,
@@ -65,10 +67,10 @@ class JiraComment(ApiModel, TimestampMixin):
         if isinstance(body, dict):
             # Handle Atlassian Document Format (ADF)
             converted = adf_to_text(body)
-            body_content = converted if converted else EMPTY_STRING
+            body_content = redact(converted if converted else EMPTY_STRING)
         elif body:
             # Handle plain text or HTML content
-            body_content = str(body)
+            body_content = redact(str(body))
 
         return cls(
             id=comment_id,
