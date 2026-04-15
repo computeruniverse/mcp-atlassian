@@ -1,7 +1,7 @@
 ---
 name: create-ticket
 description: Create a Jira ticket in the NOP project with proper custom fields, templates, and workflow transitions
-argument-hint: "<summary>" [--type Story|Defect] [--brand "CP & CU"|CP|CU] [--sprint "Tech Debt Backlog"] [--labels Backend,TechnicalDebt] [--due YYYY-MM-DD]
+argument-hint: "<summary>" [--type Story|Defect] [--brand "CP & CU"|CP|CU] [--sprint "Tech Debt Backlog"] [--labels Backend,TechnicalDebt] [--due YYYY-MM-DD] [--priority Standard|High|Critical|...]
 ---
 
 # Create a Jira Ticket (NOP Project)
@@ -17,6 +17,7 @@ Create a Jira ticket based on the conversation context and user input.
   - `--sprint` = sprint name (default: none)
   - `--labels` = comma-separated labels (default: none)
   - `--due` = due date in `YYYY-MM-DD` format (default: none)
+  - `--priority` = priority name (default: auto-detected, see Priority Rules below)
   - Any remaining text = additional context for the description
 
 **Due date detection:** Even without `--due`, scan the full conversation context for any explicit deadlines or dates (e.g. "bis 30. September 2028", "Retirement-Datum: 30.09.2028", "by Q3 2026"). If found, convert to `YYYY-MM-DD` and use as the due date. Always prefer the most concrete/specific date mentioned.
@@ -29,9 +30,11 @@ Create a Jira ticket based on the conversation context and user input.
 |---|---|---|---|
 | Brand | `customfield_11115` | array of strings | `"CP"`, `"CU"`, `"CP & CU"` |
 | (always set) | `customfield_11109` | array of strings | always `["Alle"]` |
-| Akzeptanzkriterien | `customfield_11001` | Atlassian Document Format (ADF) | see below |
+| Akzeptanzkriterien | `customfield_11001` | plain string (create: ADF; update: plain string) | see below |
 
-### Akzeptanzkriterien ADF format
+### Akzeptanzkriterien format
+
+**Creating** a ticket (`jira_create_issue`): pass as ADF object in `additional_fields`:
 
 ```json
 {
@@ -45,6 +48,12 @@ Create a Jira ticket based on the conversation context and user input.
     }]
   }]
 }
+```
+
+**Updating** a ticket (`jira_update_issue`): ADF is rejected — pass as a plain Markdown string in `additional_fields` instead:
+
+```json
+{ "customfield_11001": "- criterion one\n- criterion two" }
 ```
 
 ### Sprint field
@@ -71,6 +80,52 @@ Create a Jira ticket based on the conversation context and user input.
 Link type ID for "Blocks": `10000`. Use link name `"Relates"` (not `"Relates to"`).
 
 For "Blocks" direction in `jira_create_issue_link`: `inward_issue_key` = the BLOCKER, `outward_issue_key` = the BLOCKED.
+
+### Priority Rules
+
+If `--priority` is not explicitly provided, infer the priority from the ticket type and context using the rules below. Always include the resolved priority in the Step 4 preview so the user can correct it before creation.
+
+#### Defects
+
+| Priority | Criteria |
+|---|---|
+| **Blocker** | Active production incident blocking a release or rendering a major feature completely unusable (e.g. payment provider down, discount codes not applied in cart) |
+| **Highest** | Production outage; checkout/payment completely broken for all users; data loss |
+| **Critical** | Major user-facing flow broken (login, order placement, payment); affects all users of a brand |
+| **High** | Important feature broken for a subset of users, or a key flow degraded but still partially working |
+| **Medium** | Non-critical feature broken; visible error but no blocker |
+| **Standard** | Minor bug; edge case; cosmetic issue with functional impact ← **default for Defects** |
+| **Low** | Cosmetic issue with no functional impact; affects only admin panel or internal tooling |
+| **Trivial** | Typo, whitespace, or visual imperfection with no user impact; only reproducible under very unusual conditions |
+
+#### Stories
+
+| Priority | Criteria |
+|---|---|
+| **Highest** | Legal/compliance/GDPR deadline; security vulnerability requiring immediate fix |
+| **Critical** | Direct revenue impact; hard external deadline (e.g. payment provider migration, SAP integration change) |
+| **High** | Stakeholder-requested with near-term deadline; key user flow improvement |
+| **Medium** | Standard feature with clear business value and a timeline |
+| **Standard** | Regular backlog item; no special urgency ← **default for Stories** |
+| **Low** | Nice-to-have with no deadline; only affects internal users or admin panel; no measurable customer impact |
+| **Trivial** | Pure housekeeping with no user impact (log cleanup, comment fix, renaming) |
+
+#### Escalation signal words (scan conversation context)
+
+If any of these appear, consider upgrading the priority one level:
+- `Blocker`/`Highest`: "Ausfall", "down", "komplett kaputt", "nicht erreichbar", "production outage", "blockiert Release"
+- `Critical`: "Zahlung", "payment", "Login", "Bestellung", "SAP-Migration", "Pflicht", "direkte Umsatzauswirkung"
+- `High`: "Deadline", "bis [date]", "dringend", "Stakeholder", "nächster Sprint"
+
+#### Downgrade signal words
+
+If any of these apply, consider lowering the priority:
+- → `Low`: "nur Admin", "nur intern", "kein funktionaler Einfluss", "kosmetisch", "nice-to-have"
+- → `Trivial`: "Tippfehler", "Leerzeichen", "Kommentar", "Umbenennung"
+
+#### Ongoing cost consideration
+
+If a workaround is in place that incurs **recurring costs** (e.g. a paid GitHub-hosted larger runner, extra cloud compute, a paid third-party service), treat that as a nudge **up** toward `Standard` even if there is no user-facing urgency. A costless workaround with no deadline stays at `Low`.
 
 ### Ticket title convention
 
@@ -174,6 +229,7 @@ Write all ticket content in **German**.
 Show a formatted preview of the ticket to the user and ask for confirmation before creating it. Include:
 - Summary
 - Type
+- Priority (always show — with a note if auto-detected so the user can correct it)
 - Labels
 - Brand
 - Sprint (if set)
@@ -194,6 +250,8 @@ After user confirmation, create the ticket via `jira_create_issue` with:
   - `customfield_11001`: Akzeptanzkriterien in ADF format (for Stories)
   - `customfield_10020`: Sprint ID as a plain integer, not an object (if sprint selected)
   - `labels`: array of label strings
+  - `priority`: object with `name` key, e.g. `{"name": "Standard"}` — always set this field using the resolved priority
+- **Never combine `description` and `customfield_11001` in the same `jira_update_issue` call** — this causes a validation error. When updating an existing ticket, set description and acceptance criteria in two separate calls.
 - `customfield_10999`: due date string in `YYYY-MM-DD` format (if a due date was detected or provided) — this is the NOP project's custom "Fälligkeitsdatum" field shown in the UI; do NOT use the standard `duedate` field
 
 ### Step 6 — Transition to "Ready 4 Groom"
