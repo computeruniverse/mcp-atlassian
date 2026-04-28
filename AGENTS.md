@@ -80,6 +80,14 @@ uv run pytest --cov=src/mcp_atlassian --cov-report=term-missing  # coverage
 
 ---
 
+## Windows
+
+See [WINDOWS_SETUP.md](WINDOWS_SETUP.md) for full setup instructions on Windows, including `uv` installation, credential configuration, and Claude Code MCP client config.
+
+> Always run the server via `uv run --directory <repo>` from the cloned repo — never from a PyPI install.
+
+---
+
 ## Quick reference
 
 ```bash
